@@ -13,11 +13,3 @@ export interface Post {
     text: string;
     author_user_id: string;
 }
-
-export interface DialogMessage {
-    id: string;
-    from: string;
-    to: string;
-    text: string;
-    timestamp: string;
-}

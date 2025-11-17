@@ -1,11 +1,11 @@
-import {DialogMessage, Post, User} from "./types";
+import {Post, User} from "./types";
 import {authMiddleware, generateToken} from "./auth";
 import {Router} from "express";
 import {v4 as uuidv4} from 'uuid';
+import {dialogServiceClient} from "./dialogServiceClient";
 
 export const users = new Map<string, User>();
 export const posts = new Map<string, Post>();
-export const messages = new Map<string, DialogMessage>();
 
 export const router = Router();
 
@@ -130,30 +130,34 @@ router.get('/post/feed', authMiddleware, (req: any, res) => {
     res.json(feed);
 });
 
-router.post('/dialog/:user_id/send', authMiddleware, (req: any, res) => {
+router.post('/dialog/:user_id/send', authMiddleware, async (req: any, res) => {
     const from = req.user as string;
     const to = req.params.user_id as string;
     const { text } = req.body;
     if (!text) return res.status(400).json({ message: 'text required' });
     if (!users.has(to)) return res.status(404).json({ message: 'not found' });
-    const id = uuidv4();
-    const msg: DialogMessage = {
-        id,
-        from,
-        to,
-        text,
-        timestamp: new Date().toISOString(),
-    };
-    messages.set(id, msg);
+
+    try{
+        await dialogServiceClient.sendMessage(from, to, text)
+    } catch(err) {
+        console.error("Dialog service error", err.response?.data || err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
     res.json({ message: 'ok' });
 });
 
-router.get('/dialog/:user_id/list', authMiddleware, (req: any, res) => {
+router.get('/dialog/:user_id/list', authMiddleware, async (req: any, res) => {
     const userId = req.user as string;
     const otherUserId = req.params.user_id as string;
     if (!users.has(otherUserId)) return res.status(404).json({ message: 'not found' });
-    const list = Array.from(messages.values())
-        .filter(msg => msg.from === userId || msg.to === userId || msg.from === otherUserId || msg.to === otherUserId);
-    res.json(list);
+
+    let result;
+    try{
+        result = await dialogServiceClient.getList(userId, otherUserId)
+    } catch(err) {
+        console.error("Dialog service error", err.response?.data || err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+    res.json(result.data);
 });
 
