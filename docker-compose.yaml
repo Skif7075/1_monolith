@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   monolith:
-    image: skif7075/monolith-example:latest
+    image: skif7075/monolith-example:1.0.0
     ports:
       - "3000:3000"
     restart: unless-stopped
